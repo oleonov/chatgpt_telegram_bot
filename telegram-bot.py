@@ -1,37 +1,15 @@
 import logging
-import os
 import re
 import threading
 from typing import Optional, Tuple
 
 import openai
-from dotenv import load_dotenv
-from telegram import ChatMember, ChatMemberUpdated, Update
+from telegram import ChatMember, ChatMemberUpdated, Update, Bot
 from telegram import ParseMode
-from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes
+from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
 
-##########
-# Settings
-##########
-
-# Find .env file
-load_dotenv()
-
-# You can also set these environment variables for docker
-
-# OpenAI API key
-openai.api_key = os.getenv('OPENAI_KEY')
-
-# Telegram bot key
-tgkey = os.getenv('TELEGRAM_KEY')
-
-# Defaults
-main_user_id = int(os.getenv('MAIN_USER_ID'))
-available_in_chat = os.getenv('AVAILABLE_IN_CHATS').split(',')
-botname = os.getenv('BOT_NAME')
-
-# Lots of console output
-debug = False
+from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message
+from settings import debug, main_user_id, available_in_chat, tgkey, botname
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -75,14 +53,37 @@ def simple_reply(update):
     update.message.reply_text(text=answer)
 
 
+def answer_user_in_chat(context: ContextTypes, chat: str):
+    if chat not in available_in_chat:
+        return
+    bot = Bot(token=tgkey)
+    answer = generate_answer(context.user_data["reply_user_id"], context.user_data["text"])
+    if debug:
+        print("answer_user_in_chat:\n" + f'chat_id=@{chat}\n @{context.user_data["mention_markdown"]} {answer}')
+
+    bot.send_message(chat_id=f'@{chat}',
+                     text=f'@{context.user_data["mention_markdown"]} {answer}',
+                     parse_mode=ParseMode.MARKDOWN)
+    clear_forwarded_message(context)
+
+
 def message_handler(update: Update, context: ContextTypes):
     if update.message.chat.type == "private":
         if update.message.from_user.id != main_user_id:
+            update.effective_chat.send_message("❌ Для этого действия нужно быть администратором бота")
+            return
+        elif update.message.forward_date is not None:
+            if save_forwarded_message(update, context):
+                update.effective_chat.send_message("Напишите название чата в котором нужно ответить пользователю")
+            else:
+                update.effective_chat.send_message("Пользователь скрыл данные, невозможно ответить на его сообщение")
+            return
+        elif context.user_data["text"] is not None and context.user_data["text"] != "":
+            comput = threading.Thread(target=answer_user_in_chat, args=(context, update.message.text.replace("@", ""),))
+            comput.start()
             return
     elif update.message.chat.username not in available_in_chat:
         return
-
-    global botname
 
     if f'@{botname}' in update.message.text:
         if update.message.reply_to_message is None:
@@ -193,6 +194,8 @@ def generate_image(question):
         size="256x256"
     )
     return response['data'][0]['url']
+
+
 #####################
 # End main functions#
 #####################
@@ -207,6 +210,9 @@ def main():
     """Start the bot."""
     updater = Updater(tgkey)
     dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("cancel", cancel_command))
     dp.add_handler(MessageHandler(Filters.text, message_handler))
     dp.add_handler(ChatMemberHandler(greet_chat_members_handler, ChatMemberHandler.CHAT_MEMBER))
     # log all errors
