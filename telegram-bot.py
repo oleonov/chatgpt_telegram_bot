@@ -1,6 +1,7 @@
 import logging
 import re
 import threading
+import time
 from typing import Optional, Tuple
 
 import openai
@@ -9,7 +10,15 @@ from telegram import ParseMode
 from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
 
 from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message
-from settings import debug, main_user_id, available_in_chat, tgkey, botname
+from settings import debug, main_user_id, available_in_chat, tgkey, botname, minutes_for_user_thinking
+
+
+class GreetedUser:
+    def __init__(self, user_id: int, greeting_bot_message: str, greeting_date: float):
+        self.user_id = user_id
+        self.greeting_bot_message = greeting_bot_message
+        self.greeting_date = greeting_date
+
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -17,6 +26,8 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 completion = openai.Completion()
+
+last_greeted_user = dict()
 
 
 ##################
@@ -47,8 +58,10 @@ def reply_a_question(update):
                               reply_to_message_id=update.message.reply_to_message.message_id)
 
 
-def simple_reply(update):
-    prompt = f'AI:{update.message.reply_to_message.text}\nHuman:{update.message.text}\nAI:'
+def simple_reply(update, bot_message=None):
+    if bot_message is None:
+        bot_message = update.message.reply_to_message.text
+    prompt = f'AI:{bot_message}\nHuman:{update.message.text}\nAI:'
     answer = generate_answer_raw(update.message.from_user.id, prompt)
     update.message.reply_text(text=answer)
 
@@ -67,6 +80,20 @@ def answer_user_in_chat(context: ContextTypes, chat: str):
     clear_forwarded_message(context)
 
 
+# Detect if user answered to greeting bot message without mentioning bot or reply to bot message
+def is_need_answer(update: Update) -> bool:
+    if update.message.chat.type == "private" or \
+            update.message.chat.username not in available_in_chat or \
+            "@" in update.message.text or \
+            update.message.reply_to_message is not None or \
+            last_greeted_user.get(update.message.chat.id) is None or \
+            last_greeted_user[update.message.chat.id].user_id != update.message.from_user.id or \
+            (time.time() - last_greeted_user[update.message.chat.id].greeting_date) / 60 > minutes_for_user_thinking:
+        return False
+    else:
+        return True
+
+
 def message_handler(update: Update, context: ContextTypes):
     if update.message.chat.type == "private":
         if update.message.from_user.id != main_user_id:
@@ -78,7 +105,7 @@ def message_handler(update: Update, context: ContextTypes):
             else:
                 update.effective_chat.send_message("Пользователь скрыл данные, невозможно ответить на его сообщение")
             return
-        elif context.user_data["text"] is not None and context.user_data["text"] != "":
+        elif context.user_data.get("text") is not None and context.user_data["text"] != "":
             comput = threading.Thread(target=answer_user_in_chat, args=(context, update.message.text.replace("@", ""),))
             comput.start()
             return
@@ -104,7 +131,11 @@ def message_handler(update: Update, context: ContextTypes):
         if update.message.from_user.id == main_user_id and update.message.chat.type == "private":
             comput = threading.Thread(target=answer_a_question, args=(update,))
             comput.start()
-    return
+        elif is_need_answer(update):
+            comput = threading.Thread(target=simple_reply,
+                                      args=(update, last_greeted_user[update.message.chat.id].greeting_bot_message))
+            comput.start()
+            last_greeted_user.pop(update.message.chat.id)
 
 
 def extract_status_change(chat_member_update: ChatMemberUpdated) -> Optional[Tuple[bool, bool]]:
@@ -153,6 +184,9 @@ def greet_chat_members_handler(update, context):
 def send_greet_chat_message(update):
     answer = generate_answer(update.chat_member.new_chat_member.user.id,
                              f'Весело попроси пользователя {update.chat_member.new_chat_member.user.first_name} рассказать о себе и своём опыте в программировании.')
+    last_greeted_user[update.chat_member.chat.id] = GreetedUser(update.chat_member.new_chat_member.user.id,
+                                                                answer,
+                                                                time.time())
     update.effective_chat.send_message(
         f'@{update.chat_member.new_chat_member.user.mention_markdown()} {answer}',
         parse_mode=ParseMode.MARKDOWN

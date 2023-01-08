@@ -1,5 +1,6 @@
 # GPT3-Telegram-Chatbot
 OpenAI chatbot for Telegram using GPT-3
+You can try it in my chat [Чат для канала ITКультура](https://t.me/itcult_chat) by mentioning @the_ai_buddy_cctv_it_bot
 
 To run telegram bot you have to:
 1. Rename `sample.env` to `.env`
