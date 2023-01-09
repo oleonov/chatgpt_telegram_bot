@@ -9,6 +9,8 @@ from telegram import ChatMember, ChatMemberUpdated, Update, Bot
 from telegram import ParseMode
 from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
 
+import settings
+from cache_messages import MessagesCache
 from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message
 from settings import debug, main_user_id, available_in_chat, tgkey, botname, minutes_for_user_thinking
 
@@ -20,6 +22,12 @@ class GreetedUser:
         self.greeting_date = greeting_date
 
 
+class UserMessage:
+    def __init__(self, user_id: int, message: str):
+        self.user_id = user_id
+        self.message = message
+
+
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -28,6 +36,9 @@ logger = logging.getLogger(__name__)
 completion = openai.Completion()
 
 last_greeted_user = dict()
+
+# Contains dictionary with messages between users and bot
+messages_cache = MessagesCache()
 
 
 ##################
@@ -58,11 +69,9 @@ def reply_a_question(update):
                               reply_to_message_id=update.message.reply_to_message.message_id)
 
 
-def simple_reply(update, bot_message=None):
-    if bot_message is None:
-        bot_message = update.message.reply_to_message.text
-    prompt = f'AI:{bot_message}\nHuman:{update.message.text}\nAI:'
-    answer = generate_answer_raw(update.message.from_user.id, prompt)
+def simple_reply(update):
+    messages_cache.add(update.message.from_user.id, update.message.reply_to_message.text, True)
+    answer = generate_answer_raw(update.message.from_user.id, update.message.text)
     update.message.reply_text(text=answer)
 
 
@@ -133,7 +142,7 @@ def message_handler(update: Update, context: ContextTypes):
             comput.start()
         elif is_need_answer(update):
             comput = threading.Thread(target=simple_reply,
-                                      args=(update, last_greeted_user[update.message.chat.id].greeting_bot_message))
+                                      args=(update,))
             comput.start()
             last_greeted_user.pop(update.message.chat.id)
 
@@ -182,8 +191,9 @@ def greet_chat_members_handler(update, context):
 
 
 def send_greet_chat_message(update):
-    answer = generate_answer(update.chat_member.new_chat_member.user.id,
-                             f'Весело попроси пользователя {update.chat_member.new_chat_member.user.first_name} рассказать о себе и своём опыте в программировании.')
+    answer = generate_answer_raw(user_id=update.chat_member.new_chat_member.user.id,
+                                 prompt=f'Весело попроси пользователя {update.chat_member.new_chat_member.user.first_name} рассказать о себе и своём опыте в программировании.',
+                                 save_in_cache=False)
     last_greeted_user[update.chat_member.chat.id] = GreetedUser(update.chat_member.new_chat_member.user.id,
                                                                 answer,
                                                                 time.time())
@@ -196,16 +206,21 @@ def send_greet_chat_message(update):
 ################
 # Main functions#
 ################
-def generate_answer(user_id, question):
-    prompt = f'Human: {question}\nAI:'
-    return generate_answer_raw(user_id, prompt)
+def generate_answer(user_id, question, save_in_cache=True):
+    return generate_answer_raw(user_id, question, save_in_cache)
 
 
-def generate_answer_raw(user_id, prompt):
+def generate_answer_raw(user_id, prompt, save_in_cache=True):
+    if save_in_cache:
+        messages_cache.add(user_id, prompt, False)
+    prompt = messages_cache.get_formatted(user_id)
+    if not save_in_cache:
+        prompt += f'\nHuman:{prompt}\n'
+    prompt += f'AI:'
     user_id_str = str(user_id)
     if debug:
         print("----Start generating------")
-        print("User: " + user_id_str, "\nQuestion: " + prompt)
+        print("User: " + user_id_str, ", dialog:\n" + prompt)
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
@@ -218,6 +233,7 @@ def generate_answer_raw(user_id, prompt):
         user=user_id_str
     )
     answer = response.choices[0].text.strip()
+    messages_cache.add(user_id, answer, True)
     return answer
 
 
@@ -244,6 +260,8 @@ def main():
     """Start the bot."""
     updater = Updater(tgkey)
     dp = updater.dispatcher
+
+    settings.bot_id = updater.bot.get_me().id
 
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("cancel", cancel_command))
