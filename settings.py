@@ -18,7 +18,7 @@ available_in_chat = os.getenv('AVAILABLE_IN_CHATS').split(',')
 botname = os.getenv('BOT_NAME')
 
 # Lots of console output
-debug = True
+debug = False
 
 # Wait for user to answer on greeting message
 minutes_for_user_thinking = 10
