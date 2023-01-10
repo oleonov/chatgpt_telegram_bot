@@ -213,17 +213,17 @@ def generate_answer(user_id, question, save_in_cache=True):
 def generate_answer_raw(user_id, prompt, save_in_cache=True):
     if save_in_cache:
         messages_cache.add(user_id, prompt, False)
-    prompt = messages_cache.get_formatted(user_id)
+    question = messages_cache.get_formatted(user_id)
     if not save_in_cache:
-        prompt += f'\nHuman:{prompt}\n'
-    prompt += f'AI:'
+        question += f'\nHuman:{prompt}\n'
+    question += f'AI:'
     user_id_str = str(user_id)
     if debug:
         print("----Start generating------")
-        print("User: " + user_id_str, ", dialog:\n" + prompt)
+        print("User: " + user_id_str, ", dialog:\n" + question)
     response = openai.Completion.create(
         model="text-davinci-003",
-        prompt=prompt,
+        prompt=question,
         temperature=0.9,
         max_tokens=1500,
         top_p=1,

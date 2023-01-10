@@ -25,7 +25,9 @@ class MessagesCache:
         self.messages[user_id] = [item for item in self.messages[user_id] if item.date > delete_before_time]
 
     def get_formatted(self, user_id: int):
+        if self.messages.get(user_id) is None:
+            return ""
         formatted_message = ""
-        for message in self.messages[user_id]:
+        for message in self.messages.get(user_id):
             formatted_message += f'AI: {message.message}\n' if message.user_id == -1 else f'Human: {message.message}\n'
         return formatted_message
