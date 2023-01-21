@@ -1,6 +1,8 @@
 from telegram import Update, ParseMode
 from telegram.ext import ContextTypes
 
+from decorators import is_main_user
+
 
 def help_command(update: Update, context: ContextTypes) -> None:
     update.effective_chat.send_message(
@@ -11,6 +13,7 @@ def help_command(update: Update, context: ContextTypes) -> None:
     )
 
 
+@is_main_user
 def cancel_command(update: Update, context: ContextTypes) -> None:
     clear_forwarded_message(context)
     update.effective_chat.send_message("Действие отменено")
