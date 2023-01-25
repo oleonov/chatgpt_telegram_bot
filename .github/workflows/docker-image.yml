@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build image
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
       - run: docker login ghcr.io -u $GITHUB_ACTOR -p ${{ secrets.TOKEN }}
