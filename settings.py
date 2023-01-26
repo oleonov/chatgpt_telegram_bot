@@ -14,7 +14,7 @@ tgkey = os.getenv('TELEGRAM_KEY')
 
 # Defaults
 main_user_id = int(os.getenv('MAIN_USER_ID'))
-available_in_chat = os.getenv('AVAILABLE_IN_CHATS').split(',')
+chats_and_greetings = dict(map(lambda pair: pair.split(":"), os.getenv('CHATS_GREETINGS').split(';')))
 botname = os.getenv('BOT_NAME')
 
 # Lots of console output

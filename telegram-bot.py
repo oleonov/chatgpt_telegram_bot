@@ -12,7 +12,7 @@ from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, Co
 import settings
 from cache_messages import MessagesCache
 from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message
-from settings import debug, main_user_id, available_in_chat, tgkey, botname, minutes_for_user_thinking
+from settings import debug, main_user_id, chats_and_greetings, tgkey, botname, minutes_for_user_thinking
 
 
 class GreetedUser:
@@ -76,7 +76,7 @@ def simple_reply(update):
 
 
 def answer_user_in_chat(context: ContextTypes, chat: str):
-    if chat not in available_in_chat:
+    if chat not in chats_and_greetings:
         return
     bot = Bot(token=tgkey)
     answer = generate_answer(context.user_data["reply_user_id"], context.user_data["text"])
@@ -92,7 +92,7 @@ def answer_user_in_chat(context: ContextTypes, chat: str):
 # Detect if user answered to greeting bot message without mentioning bot or reply to bot message
 def is_need_answer(update: Update) -> bool:
     if update.message.chat.type == "private" or \
-            update.message.chat.username not in available_in_chat or \
+            update.message.chat.username not in chats_and_greetings or \
             "@" in update.message.text or \
             update.message.reply_to_message is not None or \
             last_greeted_user.get(update.message.chat.id) is None or \
@@ -118,7 +118,7 @@ def message_handler(update: Update, context: ContextTypes):
             comput = threading.Thread(target=answer_user_in_chat, args=(context, update.message.text.replace("@", ""),))
             comput.start()
             return
-    elif update.message.chat.username not in available_in_chat:
+    elif update.message.chat.username not in chats_and_greetings:
         return
 
     if f'@{botname}' in update.message.text:
@@ -175,7 +175,7 @@ def greet_chat_members_handler(update, context):
     if debug:
         print("greet_chat_members")
 
-    if update.chat_member.chat.username not in available_in_chat:
+    if update.chat_member.chat.username not in chats_and_greetings:
         return
 
     """Greets new users in chats and announces when someone leaves"""
@@ -186,13 +186,15 @@ def greet_chat_members_handler(update, context):
     was_member, is_member = result
 
     if not was_member and is_member:
-        compute = threading.Thread(target=send_greet_chat_message, args=(update,))
+        compute = threading.Thread(target=send_greet_chat_message,
+                                   args=(update, chats_and_greetings.get(update.chat_member.chat.username)))
         compute.start()
 
 
-def send_greet_chat_message(update):
+def send_greet_chat_message(update, user_prompt):
     answer = generate_answer_raw(user_id=update.chat_member.new_chat_member.user.id,
-                                 prompt=f'Весело попроси пользователя {update.chat_member.new_chat_member.user.first_name} рассказать о себе и своём опыте в программировании.',
+                                 prompt=user_prompt.replace("{username}",
+                                                            f'{update.chat_member.new_chat_member.user.first_name}'),
                                  save_in_cache=False)
     last_greeted_user[update.chat_member.chat.id] = GreetedUser(update.chat_member.new_chat_member.user.id,
                                                                 answer,
