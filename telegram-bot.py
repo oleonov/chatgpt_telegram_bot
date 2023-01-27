@@ -104,6 +104,11 @@ def is_need_answer(update: Update) -> bool:
         return True
 
 
+def __available_in_group(update: Update) -> bool:
+    return (update.message.chat.username is not None and update.message.chat.username in chats_and_greetings) or (
+                update.message.chat.id is not None and str(update.message.chat.id) in chats_and_greetings)
+
+
 def message_handler(update: Update, context: ContextTypes):
     if update.message.chat.type == "private":
         if update.message.from_user.id != main_user_id:
@@ -119,7 +124,7 @@ def message_handler(update: Update, context: ContextTypes):
             comput = threading.Thread(target=answer_user_in_chat, args=(context, update.message.text.replace("@", ""),))
             comput.start()
             return
-    elif update.message.chat.username not in chats_and_greetings:
+    elif not __available_in_group(update):
         return
 
     if f'@{botname}' in update.message.text:
