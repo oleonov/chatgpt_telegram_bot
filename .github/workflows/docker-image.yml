@@ -20,6 +20,8 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     needs: build
     env:
       SSH_KEY_PATH: /tmp/ssh_key
