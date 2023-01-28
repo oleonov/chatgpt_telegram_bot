@@ -21,6 +21,9 @@ class MessagesCache:
     def __shrink_array(self, user_id: int, max_size: int):
         self.messages[user_id] = self.messages[user_id][-max_size:]
 
+    def remove_one_old_message(self, user_id):
+        self.messages[user_id] = self.messages[user_id][1:]
+
     def __remove_old_messages(self, user_id: int, delete_before_time: float):
         self.messages[user_id] = [item for item in self.messages[user_id] if item.date > delete_before_time]
 

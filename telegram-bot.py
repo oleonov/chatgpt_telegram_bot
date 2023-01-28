@@ -5,6 +5,7 @@ import time
 from typing import Optional, Tuple
 
 import openai
+from openai import InvalidRequestError
 from telegram import ChatMember, ChatMemberUpdated, Update, Bot
 from telegram import ParseMode
 from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
@@ -12,7 +13,7 @@ from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, Co
 import settings
 from cache_messages import MessagesCache
 from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message
-from settings import debug, main_user_id, available_in_chat, tgkey, botname, minutes_for_user_thinking
+from settings import debug, main_user_id, chats_and_greetings, tgkey, botname, minutes_for_user_thinking
 
 
 class GreetedUser:
@@ -76,7 +77,7 @@ def simple_reply(update):
 
 
 def answer_user_in_chat(context: ContextTypes, chat: str):
-    if chat not in available_in_chat:
+    if chat not in chats_and_greetings:
         return
     bot = Bot(token=tgkey)
     answer = generate_answer(context.user_data["reply_user_id"], context.user_data["text"])
@@ -92,7 +93,7 @@ def answer_user_in_chat(context: ContextTypes, chat: str):
 # Detect if user answered to greeting bot message without mentioning bot or reply to bot message
 def is_need_answer(update: Update) -> bool:
     if update.message.chat.type == "private" or \
-            update.message.chat.username not in available_in_chat or \
+            update.message.chat.username not in chats_and_greetings or \
             "@" in update.message.text or \
             update.message.reply_to_message is not None or \
             last_greeted_user.get(update.message.chat.id) is None or \
@@ -101,6 +102,11 @@ def is_need_answer(update: Update) -> bool:
         return False
     else:
         return True
+
+
+def __available_in_group(update: Update) -> bool:
+    return (update.message.chat.username is not None and update.message.chat.username in chats_and_greetings) or (
+                update.message.chat.id is not None and str(update.message.chat.id) in chats_and_greetings)
 
 
 def message_handler(update: Update, context: ContextTypes):
@@ -118,7 +124,7 @@ def message_handler(update: Update, context: ContextTypes):
             comput = threading.Thread(target=answer_user_in_chat, args=(context, update.message.text.replace("@", ""),))
             comput.start()
             return
-    elif update.message.chat.username not in available_in_chat:
+    elif not __available_in_group(update):
         return
 
     if f'@{botname}' in update.message.text:
@@ -175,7 +181,7 @@ def greet_chat_members_handler(update, context):
     if debug:
         print("greet_chat_members")
 
-    if update.chat_member.chat.username not in available_in_chat:
+    if update.chat_member.chat.username not in chats_and_greetings:
         return
 
     """Greets new users in chats and announces when someone leaves"""
@@ -186,13 +192,15 @@ def greet_chat_members_handler(update, context):
     was_member, is_member = result
 
     if not was_member and is_member:
-        compute = threading.Thread(target=send_greet_chat_message, args=(update,))
+        compute = threading.Thread(target=send_greet_chat_message,
+                                   args=(update, chats_and_greetings.get(update.chat_member.chat.username)))
         compute.start()
 
 
-def send_greet_chat_message(update):
+def send_greet_chat_message(update, user_prompt):
     answer = generate_answer_raw(user_id=update.chat_member.new_chat_member.user.id,
-                                 prompt=f'Весело попроси пользователя {update.chat_member.new_chat_member.user.first_name} рассказать о себе и своём опыте в программировании.',
+                                 prompt=user_prompt.replace("{username}",
+                                                            f'{update.chat_member.new_chat_member.user.first_name}'),
                                  save_in_cache=False)
     last_greeted_user[update.chat_member.chat.id] = GreetedUser(update.chat_member.new_chat_member.user.id,
                                                                 answer,
@@ -210,7 +218,7 @@ def generate_answer(user_id, question, save_in_cache=True):
     return generate_answer_raw(user_id, question, save_in_cache)
 
 
-def generate_answer_raw(user_id, prompt, save_in_cache=True):
+def generate_answer_raw(user_id, prompt, save_in_cache=True, attempt=0):
     if save_in_cache:
         messages_cache.add(user_id, prompt, False)
     question = messages_cache.get_formatted(user_id)
@@ -221,20 +229,30 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True):
     if debug:
         print("----Start generating------")
         print("User: " + user_id_str, ", dialog:\n" + question)
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=question,
-        temperature=0.9,
-        max_tokens=1500,
-        top_p=1,
-        frequency_penalty=0.0,
-        presence_penalty=0.6,
-        stop=[" Human:", " AI:"],
-        user=user_id_str
-    )
-    answer = response.choices[0].text.strip()
-    messages_cache.add(user_id, answer, True)
-    return answer
+    try:
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=question,
+            temperature=0.9,
+            max_tokens=1500,
+            top_p=1,
+            frequency_penalty=0.0,
+            presence_penalty=0.6,
+            stop=[" Human:", " AI:"],
+            user=user_id_str
+        )
+        answer = response.choices[0].text.strip()
+        messages_cache.add(user_id, answer, True)
+        return answer
+    except InvalidRequestError as e:
+        print(e)
+        if attempt == 0:
+            if debug:
+                print("Removing one old message, trying again...")
+                messages_cache.remove_one_old_message(user_id)
+            return generate_answer_raw(user_id, prompt, save_in_cache, attempt + 1)
+        else:
+            return "Мне нужно отдохнуть, я так устал..."
 
 
 def generate_image(question):
