@@ -32,9 +32,10 @@ jobs:
           secret_OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           secret_TELEGRAM_KEY: ${{ secrets.TELEGRAM_KEY }}
           secret_MAIN_USER_ID: ${{ secrets.MAIN_USER_ID }}
-          secret_AVAILABLE_IN_CHATS: ${{ secrets.AVAILABLE_IN_CHATS }}
+          secret_CHATS_GREETINGS: ${{ secrets.CHATS_GREETINGS }}
           secret_BOT_NAME: ${{ secrets.BOT_NAME }}
       - run: echo "GITHUB_SHA=$GITHUB_SHA" >> .env
+      - run: echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - run: echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ${{ env.SSH_KEY_PATH }} && chmod 600 ${{ env.SSH_KEY_PATH }}
       - run: scp -o StrictHostKeyChecking=no -i ${{ env.SSH_KEY_PATH }} .env ${{ secrets.PRODUCTION_SSH_USERNAME }}@${{ secrets.PRODUCTION_SSH_HOST }}:/root/chatbot/.env
       - run: ssh -i ${{ env.SSH_KEY_PATH }} ${{ secrets.PRODUCTION_SSH_USERNAME }}@${{ secrets.PRODUCTION_SSH_HOST }} "cd /home/chatbot && docker login ghcr.io -u $GITHUB_ACTOR -p ${{ secrets.TOKEN }} && docker pull ghcr.io/$GITHUB_ACTOR/chatbot:$GITHUB_SHA && docker-compose -f docker-compose.production.yml --env-file=.env up -d && docker system prune --all --force"
