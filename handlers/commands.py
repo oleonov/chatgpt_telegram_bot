@@ -11,7 +11,7 @@ def help_command(update: Update, context: ContextTypes) -> None:
         "Исходные коды бота: <a href='https://github.com/oleonov/chatgpt_telegram_bot'>chatgpt_telegram_bot</a>\n\n"
         "Если переслать мне собщение из чата, в котором я есть и написать название чата, то я смогу ответить на него,"
         " также я могу нарисовать картинку на основе описания, например:\n\n"
-        f'{botname} /generateimage Нарисуй рыжего котика, который нежится на солнце',
+        f'@{botname} /generateimage Нарисуй рыжего котика, который нежится на солнце',
         parse_mode=ParseMode.HTML
     )
 
