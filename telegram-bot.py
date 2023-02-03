@@ -106,7 +106,7 @@ def is_need_answer(update: Update) -> bool:
 
 def __available_in_group(update: Update) -> bool:
     return (update.message.chat.username is not None and update.message.chat.username in chats_and_greetings) or (
-                update.message.chat.id is not None and str(update.message.chat.id) in chats_and_greetings)
+            update.message.chat.id is not None and str(update.message.chat.id) in chats_and_greetings)
 
 
 def message_handler(update: Update, context: ContextTypes):
@@ -218,7 +218,7 @@ def generate_answer(user_id, question, save_in_cache=True):
     return generate_answer_raw(user_id, question, save_in_cache)
 
 
-def generate_answer_raw(user_id, prompt, save_in_cache=True, attempt=0):
+def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.total_attempts):
     if save_in_cache:
         messages_cache.add(user_id, prompt, False)
     question = messages_cache.get_formatted(user_id)
@@ -246,11 +246,11 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True, attempt=0):
         return answer
     except InvalidRequestError as e:
         print(e)
-        if attempt == 0:
+        if attempts > 0:
             if debug:
                 print("Removing one old message, trying again...")
-                messages_cache.remove_one_old_message(user_id)
-            return generate_answer_raw(user_id, prompt, save_in_cache, attempt + 1)
+            messages_cache.remove_one_old_message(user_id)
+            return generate_answer_raw(user_id, prompt, save_in_cache, attempts - 1)
         else:
             return "Мне нужно отдохнуть, я так устал..."
 

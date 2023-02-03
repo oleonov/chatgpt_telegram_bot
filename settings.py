@@ -24,10 +24,13 @@ debug = False
 minutes_for_user_thinking = 10
 
 # How many messages to save for each user
-store_last_messages = 10
+store_last_messages = 20
 
 # How long store messages in cache
 message_cache_minutes = 10
+
+# Attempts for making request to OpenAI
+total_attempts = 5
 
 # Will be filled after start
 bot_id = None
