@@ -27,7 +27,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Make envfile
-        run: export | grep "secret_" | sed "s/declare -x secret_//" > .env
+        run: printenv | grep "secret_" | sed "s/secret_//" > .env
+        #run: export | grep "secret_" | sed "s/declare -x secret_//" > .env
         env:
           secret_OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           secret_TELEGRAM_KEY: ${{ secrets.TELEGRAM_KEY }}
