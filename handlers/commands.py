@@ -26,7 +26,7 @@ def save_forwarded_message(update: Update, context: ContextTypes) -> bool:
     if update.message.forward_from is None:
         return False
     context.user_data["reply_user_id"] = update.message.forward_from.id
-    context.user_data["mention_markdown"] = update.message.forward_from.mention_markdown()
+    context.user_data["mention_markdown"] = update.message.forward_from.mention_markdown_v2()
     context.user_data["text"] = update.message.text
     return True
 
