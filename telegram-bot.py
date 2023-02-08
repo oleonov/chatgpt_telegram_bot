@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 
 import openai
 from openai import InvalidRequestError
+from openai.error import RateLimitError
 from telegram import ChatMember, ChatMemberUpdated, Update, Bot
 from telegram import ParseMode
 from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
@@ -72,7 +73,7 @@ def reply_a_question(update):
 
 def simple_reply(update):
     messages_cache.add(update.message.from_user.id, update.message.reply_to_message.text, True)
-    answer = generate_answer_raw(update.message.from_user.id, update.message.text)
+    answer = generate_answer_raw(update.message.from_user.id, update.message.text, ignore_exceptions=False)
     update.message.reply_text(text=answer)
 
 
@@ -218,7 +219,7 @@ def generate_answer(user_id, question, save_in_cache=True):
     return generate_answer_raw(user_id, question, save_in_cache)
 
 
-def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.total_attempts):
+def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.total_attempts, ignore_exceptions=True):
     if save_in_cache:
         messages_cache.add(user_id, prompt, False)
     question = messages_cache.get_formatted(user_id)
@@ -253,6 +254,12 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.t
             return generate_answer_raw(user_id, prompt, save_in_cache, attempts - 1)
         else:
             return "Мне нужно отдохнуть, я так устал..."
+    except RateLimitError as e:
+        print(e)
+        if ignore_exceptions:
+            return "Так много вопросов и так мало ответов..."
+        else:
+            raise e
 
 
 def generate_image(question):
