@@ -61,22 +61,20 @@ def send_generated_image(update):
 def answer_a_question(update):
     text_to_reply = update.message.text.replace(f'@{botname}', "")
     answer = generate_answer(update.message.from_user.id, text_to_reply)
-    update.effective_chat.send_message(f'@{update.message.from_user.username} {answer}',
-                                       parse_mode=ParseMode.MARKDOWN_V2)
+    update.effective_chat.send_message(f'@{update.message.from_user.username} {answer}')
 
 
 def reply_a_question(update):
     text_to_reply = update.message.reply_to_message.text + " " + update.message.text.replace(f'@{botname}', "")
     answer = generate_answer(update.message.reply_to_message.from_user.id, text_to_reply)
     update.message.reply_text(text=f'@{update.message.from_user.username} {answer}',
-                              reply_to_message_id=update.message.reply_to_message.message_id,
-                              parse_mode=ParseMode.MARKDOWN_V2)
+                              reply_to_message_id=update.message.reply_to_message.message_id)
 
 
 def simple_reply(update):
     messages_cache.add(update.message.from_user.id, update.message.reply_to_message.text, True)
     answer = generate_answer_raw(update.message.from_user.id, update.message.text, ignore_exceptions=False)
-    update.message.reply_text(text=answer, parse_mode=ParseMode.MARKDOWN_V2)
+    update.message.reply_text(text=answer)
 
 
 def answer_user_in_chat(context: ContextTypes, chat: str):
@@ -89,7 +87,7 @@ def answer_user_in_chat(context: ContextTypes, chat: str):
 
     bot.send_message(chat_id=f'@{chat}',
                      text=f'@{context.user_data["mention_markdown"]} {answer}',
-                     parse_mode=ParseMode.MARKDOWN_V2)
+                     parse_mode=ParseMode.MARKDOWN)
     clear_forwarded_message(context)
 
 
@@ -209,8 +207,8 @@ def send_greet_chat_message(update, user_prompt):
                                                                 answer,
                                                                 time.time())
     update.effective_chat.send_message(
-        f'@{update.chat_member.new_chat_member.user.mention_markdown_v2()} {answer}',
-        parse_mode=ParseMode.MARKDOWN_V2
+        f'@{update.chat_member.new_chat_member.user.mention_markdown()} {answer}',
+        parse_mode=ParseMode.MARKDOWN
     )
 
 
@@ -245,7 +243,6 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.t
             user=user_id_str
         )
         answer = response.choices[0].text.strip()
-        answer = answer.replace("`", "```")
         messages_cache.add(user_id, answer, True)
         return answer
     except InvalidRequestError as e:
