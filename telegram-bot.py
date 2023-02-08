@@ -243,6 +243,7 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.t
             user=user_id_str
         )
         answer = response.choices[0].text.strip()
+        answer = answer.replace("`", "```")
         messages_cache.add(user_id, answer, True)
         return answer
     except InvalidRequestError as e:
