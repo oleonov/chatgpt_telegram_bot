@@ -113,7 +113,10 @@ def __available_in_group(update: Update) -> bool:
 def message_handler(update: Update, context: ContextTypes):
     if update.message.chat.type == "private":
         if update.message.from_user.id != main_user_id:
-            update.effective_chat.send_message("❌ Для этого действия нужно быть администратором бота")
+            update.effective_chat.send_message(
+                "Чтобы поговорить с ботом напишите в любой из чатов, где он есть, упомянув бота. например:\n\n"
+                f'@{botname} Расскажи краткую историю человечества в 5 предложениях используя слова "красный" и "неудобный"',
+                parse_mode=ParseMode.HTML)
             return
         elif update.message.forward_date is not None:
             if save_forwarded_message(update, context):
