@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 # Find .env file
 load_dotenv()
 
+version = "0.1.0"
+
 # OpenAI API key
 openai.api_key = os.getenv('OPENAI_KEY')
 

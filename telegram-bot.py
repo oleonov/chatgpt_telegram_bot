@@ -13,7 +13,8 @@ from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, Co
 
 import settings
 from cache_messages import MessagesCache
-from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message
+from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message, \
+    version_command
 from settings import debug, main_user_id, chats_and_greetings, tgkey, botname, minutes_for_user_thinking
 
 
@@ -72,7 +73,8 @@ def reply_a_question(update):
 
 
 def simple_reply(update):
-    messages_cache.add(update.message.from_user.id, update.message.reply_to_message.text, True)
+    message = update.message.reply_to_message.text if update.message.reply_to_message.text is not None else update.message.text
+    messages_cache.add(update.message.from_user.id, message, True)
     answer = generate_answer_raw(update.message.from_user.id, update.message.text, ignore_exceptions=False)
     update.message.reply_text(text=answer)
 
@@ -293,6 +295,7 @@ def main():
 
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("cancel", cancel_command))
+    dp.add_handler(CommandHandler("version", version_command))
     dp.add_handler(MessageHandler(Filters.text, message_handler))
     dp.add_handler(ChatMemberHandler(greet_chat_members_handler, ChatMemberHandler.CHAT_MEMBER))
     # log all errors

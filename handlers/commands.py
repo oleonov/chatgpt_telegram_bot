@@ -2,7 +2,7 @@ from telegram import Update, ParseMode
 from telegram.ext import ContextTypes
 
 from decorators import is_main_user
-from settings import botname
+from settings import botname, version
 
 
 def help_command(update: Update, context: ContextTypes) -> None:
@@ -20,6 +20,11 @@ def help_command(update: Update, context: ContextTypes) -> None:
 def cancel_command(update: Update, context: ContextTypes) -> None:
     clear_forwarded_message(context)
     update.effective_chat.send_message("Действие отменено")
+
+
+def version_command(update: Update, context: ContextTypes) -> None:
+    clear_forwarded_message(context)
+    update.effective_chat.send_message(f'Версия отменено @{version}')
 
 
 def save_forwarded_message(update: Update, context: ContextTypes) -> bool:
