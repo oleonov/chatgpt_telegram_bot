@@ -24,7 +24,7 @@ def cancel_command(update: Update, context: ContextTypes) -> None:
 
 def version_command(update: Update, context: ContextTypes) -> None:
     clear_forwarded_message(context)
-    update.effective_chat.send_message(f'Версия отменено @{version}')
+    update.effective_chat.send_message(f'Версия {version}')
 
 
 def save_forwarded_message(update: Update, context: ContextTypes) -> bool:
