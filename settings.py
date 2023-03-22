@@ -15,7 +15,7 @@ openai.api_key = os.getenv('OPENAI_KEY')
 tgkey = os.getenv('TELEGRAM_KEY')
 
 # Defaults
-main_user_id = int(os.getenv('MAIN_USER_ID'))
+main_users_id = [int(numeric_string) for numeric_string in os.getenv('MAIN_USERS_ID').split(',')]
 chats_and_greetings = dict(map(lambda pair: pair.split(":"), os.getenv('CHATS_GREETINGS').split(';')))
 botname = os.getenv('BOT_NAME')
 

@@ -31,7 +31,7 @@ jobs:
         env:
           secret_OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           secret_TELEGRAM_KEY: ${{ secrets.TELEGRAM_KEY }}
-          secret_MAIN_USER_ID: ${{ secrets.MAIN_USER_ID }}
+          secret_MAIN_USERS_ID: ${{ secrets.MAIN_USERS_ID }}
           secret_CHATS_GREETINGS: ${{ secrets.CHATS_GREETINGS }}
           secret_BOT_NAME: ${{ secrets.BOT_NAME }}
       - run: echo "GITHUB_SHA=$GITHUB_SHA" >> .env

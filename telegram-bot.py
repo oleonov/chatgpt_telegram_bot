@@ -15,7 +15,7 @@ import settings
 from cache_messages import MessagesCache
 from handlers.commands import help_command, cancel_command, save_forwarded_message, clear_forwarded_message, \
     version_command
-from settings import debug, main_user_id, chats_and_greetings, tgkey, botname, minutes_for_user_thinking
+from settings import debug, main_users_id, chats_and_greetings, tgkey, botname, minutes_for_user_thinking
 
 
 class GreetedUser:
@@ -114,7 +114,7 @@ def __available_in_group(update: Update) -> bool:
 
 def message_handler(update: Update, context: ContextTypes):
     if update.message.chat.type == "private":
-        if update.message.from_user.id != main_user_id:
+        if update.message.from_user.id not in main_users_id:
             update.effective_chat.send_message(
                 "Чтобы поговорить с ботом напишите в любой из чатов, где он есть, упомянув бота. например:\n\n"
                 f'@{botname} Расскажи краткую историю человечества в 5 предложениях используя слова "красный" и "неудобный"',
@@ -149,7 +149,7 @@ def message_handler(update: Update, context: ContextTypes):
         comput = threading.Thread(target=simple_reply, args=(update,))
         comput.start()
     else:
-        if update.message.from_user.id == main_user_id and update.message.chat.type == "private":
+        if update.message.from_user.id in main_users_id and update.message.chat.type == "private":
             comput = threading.Thread(target=answer_a_question, args=(update,))
             comput.start()
         elif is_need_answer(update):
