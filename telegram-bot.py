@@ -119,7 +119,7 @@ def message_handler(update: Update, context: ContextTypes):
                 "Чтобы поговорить с ботом напишите в любой из чатов, где он есть, упомянув бота. например:\n\n"
                 f'@{botname} Расскажи краткую историю человечества в 5 предложениях используя слова "красный" и "неудобный"',
                 parse_mode=ParseMode.HTML)
-            print("Message from unknown user: " + update.message.from_user.id)
+            print("Message from unknown user: " + str(update.message.from_user.id))
             return
         elif update.message.forward_date is not None:
             if save_forwarded_message(update, context):
@@ -284,7 +284,7 @@ def generate_image(question):
 
 def error(update, context):
     """Log Errors caused by Updates."""
-    logger.warning('Update "%s" caused error "%s"', update)
+    logger.warning('Update "%s" caused error', update)
 
 
 def main():
