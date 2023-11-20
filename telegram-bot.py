@@ -5,8 +5,10 @@ import time
 from typing import Optional, Tuple
 
 import openai
-from openai import InvalidRequestError
-from openai.error import RateLimitError
+from httpx import ReadTimeout
+from openai import BadRequestError
+from openai import OpenAI
+from openai import RateLimitError
 from telegram import ChatMember, ChatMemberUpdated, Update, Bot
 from telegram import ParseMode
 from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
@@ -36,8 +38,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-completion = openai.Completion()
-
 last_greeted_user = dict()
 
 # Contains dictionary with messages between users and bot
@@ -49,14 +49,6 @@ messages_cache = MessagesCache()
 ##################
 def remove_all_mentions(text):
     return re.sub(r'@\w+', '', text)
-
-
-def send_generated_image(update):
-    question = update.message.text.replace("/generateimage", "").replace(f'@{botname}', "")
-    if debug:
-        print("Input:\n" + question)
-    answer = generate_image(question)
-    update.message.reply_photo(answer)
 
 
 def answer_a_question(update):
@@ -134,16 +126,8 @@ def message_handler(update: Update, context: ContextTypes):
         return
 
     if f'@{botname}' in update.message.text:
-        if update.message.reply_to_message is None:
-            if "/generateimage" in update.message.text:
-                comput = threading.Thread(target=send_generated_image, args=(update,))
-                comput.start()
-            else:
-                comput = threading.Thread(target=answer_a_question, args=(update,))
-                comput.start()
-        else:
-            comput = threading.Thread(target=reply_a_question, args=(update,))
-            comput.start()
+        comput = threading.Thread(target=reply_a_question, args=(update,))
+        comput.start()
     elif update.message.reply_to_message is not None and update.message.reply_to_message.from_user.username == botname:
         """Reply to a message."""
         comput = threading.Thread(target=simple_reply, args=(update,))
@@ -227,30 +211,43 @@ def generate_answer(user_id, question, save_in_cache=True):
 def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.total_attempts, ignore_exceptions=True):
     if save_in_cache:
         messages_cache.add(user_id, prompt, False)
-    question = messages_cache.get_formatted(user_id)
+    messages = messages_cache.get_formatted(user_id)
     if not save_in_cache:
-        question += f'\nHuman:{prompt}\n'
-    question += f'AI:'
+        messages.append({"role": "user", "content": prompt})
+
+    # question += f'AI:'
     user_id_str = str(user_id)
     if debug:
         print("----Start generating------")
-        print("User: " + user_id_str, ", dialog:\n" + question)
+        print("User: " + user_id_str, ", dialog:\n" + str(messages))
     try:
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=question,
+        response = openai.chat.completions.create(
+            messages=messages,
+            model="gpt-3.5-turbo",
             temperature=0.9,
             max_tokens=1500,
-            top_p=1,
-            frequency_penalty=0.0,
-            presence_penalty=0.6,
-            stop=[" Human:", " AI:"],
-            user=user_id_str
+            user=user_id_str,
+            stream=False,
+            timeout=60
         )
-        answer = response.choices[0].text.strip()
+        # response = openai.Completion.create(
+        #     model="gpt-3.5-turbo",
+        #     prompt=question,
+        #     temperature=0.9,
+        #     max_tokens=1500,
+        #     top_p=1,
+        #     frequency_penalty=0.0,
+        #     presence_penalty=0.6,
+        #     stop=[" Human:", " AI:"],
+        #     user=user_id_str
+        # )
+        if debug:
+            print("----Response------")
+            print(str(response))
+        answer = response.choices[0].message.content
         messages_cache.add(user_id, answer, True)
         return answer
-    except InvalidRequestError as e:
+    except BadRequestError as e:
         print(e)
         if attempts > 0:
             if debug:
@@ -259,21 +256,18 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.t
             return generate_answer_raw(user_id, prompt, save_in_cache, attempts - 1)
         else:
             return "Мне нужно отдохнуть, я так устал..."
+    except ReadTimeout as e:
+        print(e)
+        if ignore_exceptions:
+            return "Оракул сегодня изучает числа..."
+        else:
+            raise e
     except RateLimitError as e:
         print(e)
         if ignore_exceptions:
             return "Так много вопросов и так мало ответов..."
         else:
             raise e
-
-
-def generate_image(question):
-    response = openai.Image.create(
-        prompt=question,
-        n=1,
-        size="256x256"
-    )
-    return response['data'][0]['url']
 
 
 #####################
