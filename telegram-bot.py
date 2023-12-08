@@ -58,10 +58,10 @@ def answer_a_question(update):
 
 
 def reply_a_question(update):
-    text_to_reply = update.message.reply_to_message.text + " " + update.message.text.replace(f'@{botname}', "")
-    answer = generate_answer(update.message.reply_to_message.from_user.id, text_to_reply)
+    text_to_reply = update.message.text.replace(f'@{botname}', "")
+    answer = generate_answer(update.message.from_user.id, text_to_reply)
     update.message.reply_text(text=f'@{update.message.from_user.username} {answer}',
-                              reply_to_message_id=update.message.reply_to_message.message_id)
+                              reply_to_message_id=update.message.message_id)
 
 
 def simple_reply(update):
@@ -125,12 +125,12 @@ def message_handler(update: Update, context: ContextTypes):
     elif not __available_in_group(update):
         return
 
-    if f'@{botname}' in update.message.text:
-        comput = threading.Thread(target=reply_a_question, args=(update,))
-        comput.start()
-    elif update.message.reply_to_message is not None and update.message.reply_to_message.from_user.username == botname:
+    if update.message.reply_to_message is not None and update.message.reply_to_message.from_user.username == botname:
         """Reply to a message."""
         comput = threading.Thread(target=simple_reply, args=(update,))
+        comput.start()
+    elif f'@{botname}' in update.message.text:
+        comput = threading.Thread(target=reply_a_question, args=(update,))
         comput.start()
     else:
         if update.message.from_user.id in main_users_id and update.message.chat.type == "private":
