@@ -40,7 +40,7 @@ jobs:
       - name: Stop previous container
         run: ssh -i ${{ env.SSH_KEY_PATH }} ${{ secrets.PRODUCTION_SSH_USERNAME }}@${{ secrets.PRODUCTION_SSH_HOST }} "docker ps | grep \"chatbot\" | awk '{ print \$1 }' | xargs -I{} docker stop {}"
       - name: Launch new container
-        run: ssh -i ${{ env.SSH_KEY_PATH }} ${{ secrets.PRODUCTION_SSH_USERNAME }}@${{ secrets.PRODUCTION_SSH_HOST }} "cd /root/chatbot && docker login ghcr.io -u $GITHUB_ACTOR -p ${{ secrets.GITHUB_TOKEN }} && docker pull ghcr.io/$GITHUB_ACTOR/chatbot:$GITHUB_SHA && docker run -d --env-file=.env ghcr.io/$GITHUB_ACTOR/chatbot:$GITHUB_SHA"
+        run: ssh -i ${{ env.SSH_KEY_PATH }} ${{ secrets.PRODUCTION_SSH_USERNAME }}@${{ secrets.PRODUCTION_SSH_HOST }} "cd /root/chatbot && docker login ghcr.io -u $GITHUB_ACTOR -p ${{ secrets.GITHUB_TOKEN }} && docker pull ghcr.io/$GITHUB_ACTOR/chatbot:$GITHUB_SHA && docker run -e PYTHONUNBUFFERED=1 -d --env-file=.env ghcr.io/$GITHUB_ACTOR/chatbot:$GITHUB_SHA"
       - name: Cleanup unused Docker images
         run: docker system prune --all --force
 
