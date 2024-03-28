@@ -135,6 +135,8 @@ def message_handler(update: Update, context: ContextTypes):
             comput.start()
             return
     elif not __available_in_group(update):
+        if debug:
+            print("not available in groups")
         return
 
     if update.message.reply_to_message is not None and update.message.reply_to_message.from_user.username == botname:
