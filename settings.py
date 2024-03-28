@@ -20,7 +20,7 @@ chats_and_greetings = dict(map(lambda pair: pair.split(":"), os.getenv('CHATS_GR
 botname = os.getenv('BOT_NAME')
 
 # Lots of console output
-debug = False
+debug = True
 
 # Wait for user to answer on greeting message
 minutes_for_user_thinking = 10
