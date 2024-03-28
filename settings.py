@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 # Find .env file
 load_dotenv()
 
-version = "0.2.0"
+version = "0.3.0"
 
 # OpenAI API key
-openai.api_key = os.getenv('OPENAI_KEY')
+openai_api_key = os.getenv('OPENAI_KEY')
 
 # Telegram bot key
 tgkey = os.getenv('TELEGRAM_KEY')

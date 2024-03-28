@@ -4,11 +4,8 @@ import threading
 import time
 from typing import Optional, Tuple
 
-import openai
 from httpx import ReadTimeout
-from openai import BadRequestError
-from openai import OpenAI
-from openai import RateLimitError
+from openai import OpenAI, RateLimitError, BadRequestError
 from telegram import ChatMember, ChatMemberUpdated, Update, Bot
 from telegram import ParseMode
 from telegram.ext import Updater, ChatMemberHandler, MessageHandler, Filters, ContextTypes, CommandHandler
@@ -43,6 +40,11 @@ last_greeted_user = dict()
 # Contains dictionary with messages between users and bot
 messages_cache = MessagesCache()
 
+client = OpenAI(
+    # This is the default and can be omitted
+    api_key=settings.openai_api_key,
+)
+
 
 ##################
 # Command handlers#
@@ -58,10 +60,10 @@ def answer_a_question(update):
 
 
 def reply_a_question(update):
-    text_to_reply = update.message.text.replace(f'@{botname}', "")
+    text_to_reply = update.message.reply_to_message.text + update.message.text.replace(f'@{botname}', ".")
     answer = generate_answer(update.message.from_user.id, text_to_reply)
     update.message.reply_text(text=f'@{update.message.from_user.username} {answer}',
-                              reply_to_message_id=update.message.message_id)
+                              reply_to_message_id=update.message.reply_to_message.message_id)
 
 
 def simple_reply(update):
@@ -221,7 +223,7 @@ def generate_answer_raw(user_id, prompt, save_in_cache=True, attempts=settings.t
         print("----Start generating------")
         print("User: " + user_id_str, ", dialog:\n" + str(messages))
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             messages=messages,
             model="gpt-3.5-turbo",
             temperature=0.9,
