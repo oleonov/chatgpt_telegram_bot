@@ -115,7 +115,7 @@ def __available_in_group(update: Update) -> bool:
 
 def message_handler(update: Update, context: ContextTypes):
     if debug:
-        print("message_handler" + str(update))
+        print(f'@{botname}:' + "message_handler" + str(update))
 
     if update.message.chat.type == "private":
         if update.message.from_user.id not in main_users_id:
