@@ -60,7 +60,7 @@ def answer_a_question(update):
 
 
 def reply_a_question(update):
-    if update.message.reply_to_message.text is not None:
+    if update.message.reply_to_message is not None:
         text_to_reply = update.message.reply_to_message.text + update.message.text.replace(f'@{botname}', ".")
         reply_to_message_id = update.message.reply_to_message.message_id
     else:
