@@ -135,10 +135,14 @@ def message_handler(update: Update, context: ContextTypes):
         return
 
     if update.message.reply_to_message is not None and update.message.reply_to_message.from_user.username == botname:
+        if debug:
+            print("Simple replying to a question")
         """Reply to a message."""
         comput = threading.Thread(target=simple_reply, args=(update,))
         comput.start()
     elif f'@{botname}' in update.message.text:
+        if debug:
+            print("Replying to a question")
         comput = threading.Thread(target=reply_a_question, args=(update,))
         comput.start()
     else:
