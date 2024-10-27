@@ -61,7 +61,7 @@ def answer_a_question(update):
 
 def reply_a_question(update):
     if update.message.reply_to_message is not None:
-        text_to_reply = update.message.reply_to_message.text + update.message.text.replace(f'@{botname}', ".")
+        text_to_reply = update.message.reply_to_message.caption + update.message.text.replace(f'@{botname}', ".")
         reply_to_message_id = update.message.reply_to_message.message_id
     else:
         text_to_reply = update.message.text.replace(f'@{botname}', "")
@@ -74,7 +74,7 @@ def reply_a_question(update):
 
 
 def simple_reply(update):
-    message = update.message.reply_to_message.text if update.message.reply_to_message.text is not None else update.message.text
+    message = update.message.reply_to_message.caption if update.message.reply_to_message.caption is not None else update.message.text
     messages_cache.add(update.message.from_user.id, message, True)
     answer = generate_answer_raw(update.message.from_user.id, update.message.text, ignore_exceptions=False)
     update.message.reply_text(text=answer)
